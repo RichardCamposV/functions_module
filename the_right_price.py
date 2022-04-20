@@ -29,6 +29,7 @@ def hear_price_and_get_price():
 
 
 def get_coolmod_select_category(session):
+    # categories are equivalent as a rounds in function start game
     max_categories = 2
     excluded_subject = ["configura tu pc a medida"]
     list_categories = []
@@ -56,25 +57,25 @@ def get_coolmod_select_category(session):
 
     while not user_select:
         if len(select_user_categories) < max_categories:
-            speak("Con que categorias le gustaria jugar")
+            speak_and_print("¿Con que categorias le gustaria jugar?:")
             user_category = hear_me()
             for data in list_categories:
                 if user_category.lower() in data:
                     if len(select_user_categories) < 1:
                         select_user_categories.append(data)
-                        print("Se agrego: {}, a la lista de juego".format(data[0]))
-                        speak("Se agrego {} a la lista de juego".format(data[0]))
+                        speak_and_print("Se agrego: {}, a la lista de juego", data[0])
+
                     elif len(select_user_categories) >= 1:
                         category_exist = False
                         for category in select_user_categories:
                             if user_category.lower() in category:
                                 category_exist = True
-                                print("Ya existe: {}, en la lista de juego".format(category[0]))
-                                speak("Ya existe {} en la lista de juego".format(category[0]))
+                                speak_and_print("Ya existe: {}, en la lista de juego", category[0])
+
                         if not category_exist:
                             select_user_categories.append(data)
-                            print("Se agrego: {}, a la lista de juego".format(data[0]))
-                            speak("Se agrego {} a la lista de juego".format(data[0]))
+                            speak_and_print("Se agrego: {}, a la lista de juego", data[0])
+
         else:
             user_select = True
 
@@ -83,8 +84,8 @@ def get_coolmod_select_category(session):
 
 def get_random_product_attributes(session, categories):
     product_page_url = random.choice(categories)
-    print("\nLa categoria con la que jugaremos sera: {}".format(product_page_url[0]))
-    speak("La categoria con la que jugaremos sera {}".format(product_page_url[0]))
+
+    speak_and_print("\nLa categoria con la que jugaremos sera: {}", product_page_url[0])
 
     product_page = session.get(product_page_url[1])
     products = product_page.html.find(".productInfo")
@@ -116,22 +117,79 @@ def show_image(session, image_src):
         print("Connection refused")
 
 
+def start_game(session, coolmod_categories, image_src, product_name, final_price):
+    rounds = 2
+    game_rounds = 0
+    win_score = 3
+    lost_score = 1
+    players_list = []
+    player1_score = 0
+    player2_score = 0
+
+    while game_rounds != rounds:
+        print("Puntuacion\n\n"
+              "Jugador 1: {}\n"
+              "Jugador 2: {}\n".format(player1_score, player2_score))
+
+        show_image(session, image_src)
+
+        speak_and_print("El nombre del producto es: {}\n"
+                        "¿Cuanto crees que vale?", product_name)
+
+        speak_and_print("Jugador 1 es tu turno...")
+        player1_price = hear_price_and_get_price()
+        speak_and_print("Jugador 2 es tu turno...")
+        player2_price = hear_price_and_get_price()
+        players_list.append([player1_price, player2_price])
+
+        winner_number = closest_number(players_list, final_price)
+
+        speak_and_print("El precio era {}", final_price)
+
+        print(players_list)
+
+        if winner_number == player1_price:
+            player1_score += win_score
+            player2_score += lost_score
+            speak_and_print("Jugador 1 a ganado la ronda")
+        elif winner_number == player2_price:
+            player2_score += win_score
+            player1_score += lost_score
+            speak_and_print("Jugador 2 a ganado la ronda")
+
+        image_src, product_name, final_price = get_random_product_attributes(session, coolmod_categories)
+        game_rounds += 1
+
+    if player1_score > player2_score:
+        speak_and_print("El jugador 1 a ganado la partida, felicidades")
+
+    elif player2_score > player1_score:
+        speak_and_print("El jugador 2 a ganado la partida, felicidades")
+
+
+def closest_number(players_list, final_price):
+    return min(players_list[-1], key=lambda x: abs(x-final_price))
+
+
+def speak_and_print(phrase, *args):
+    if args:
+        for a in args:
+            print(phrase.format(a))
+            speak(phrase.format(a))
+    else:
+        print(phrase)
+        speak(phrase)
+
+
 def main():
     session = HTMLSession()
 
-    speak("Bienvenido al precio justo, vamos a intentar adivinar los precios de algunos productos")
+    speak_and_print("Bienvenido al precio justo, vamos a intentar adivinar los precios de algunos productos")
 
     coolmod_categories = get_coolmod_select_category(session)
     image_src, product_name, final_price = get_random_product_attributes(session, coolmod_categories)
 
-    show_image(session, image_src)
-
-    print(product_name)
-    speak("El nombre del producto es {}, cuanto crees que vale?".format(product_name))
-
-    user_guess = hear_price_and_get_price()
-    speak("El precio era {}".format(final_price))
-    print(final_price)
+    start_game(session, coolmod_categories, image_src, product_name, final_price)
 
 
 if __name__ == "__main__":
