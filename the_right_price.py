@@ -183,6 +183,8 @@ def speak_and_print(phrase, *args):
 
 def main():
     # Unfinished code
+    # Test git
+    # Test git 2
     session = HTMLSession()
 
     speak_and_print("Bienvenido al precio justo, vamos a intentar adivinar los precios de algunos productos")
